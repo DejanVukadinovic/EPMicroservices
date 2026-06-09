@@ -1,0 +1,177 @@
+services:
+
+  frontend-app:
+    build: ./frontend-app
+    container_name: frontend-app
+    ports:
+      - "8080:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - epos-network
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:3000
+      TENANT_SERVICE_URL: http://tenant-service:3000
+      CUSTOMER_SERVICE_URL: http://customer-service:3000
+      BILLING_SERVICE_URL: http://billing-service:3000
+      INVOICE_SERVICE_URL: http://invoice-service:3000
+    depends_on:
+      - auth-service
+      - tenant-service
+      - customer-service
+      - billing-service
+      - invoice-service
+    networks:
+      - epos-network
+
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      DB_HOST: auth-db
+      DB_PORT: 5432
+      DB_NAME: ${AUTH_DB_NAME}
+      DB_USER: ${AUTH_DB_USER}
+      DB_PASSWORD: ${AUTH_DB_PASSWORD}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+    depends_on:
+      - auth-db
+      - rabbitmq
+    networks:
+      - epos-network
+
+  tenant-service:
+    build: ./tenant-service
+    container_name: tenant-service
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      DB_HOST: epos-main-db
+      DB_PORT: 5432
+      DB_NAME: ${EPOS_DB_NAME}
+      DB_USER: ${EPOS_DB_USER}
+      DB_PASSWORD: ${EPOS_DB_PASSWORD}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+    depends_on:
+      - epos-main-db
+      - rabbitmq
+    networks:
+      - epos-network
+
+  customer-service:
+    build: ./customer-service
+    container_name: customer-service
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      DB_HOST: customer-db
+      DB_PORT: 5432
+      DB_NAME: ${CUSTOMER_DB_NAME}
+      DB_USER: ${CUSTOMER_DB_USER}
+      DB_PASSWORD: ${CUSTOMER_DB_PASSWORD}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+    depends_on:
+      - customer-db
+      - rabbitmq
+    networks:
+      - epos-network
+
+  billing-service:
+    build: ./billing-service
+    container_name: billing-service
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      DB_HOST: billing-db
+      DB_PORT: 5432
+      DB_NAME: ${BILLING_DB_NAME}
+      DB_USER: ${BILLING_DB_USER}
+      DB_PASSWORD: ${BILLING_DB_PASSWORD}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+    depends_on:
+      - billing-db
+      - rabbitmq
+    networks:
+      - epos-network
+
+  invoice-service:
+    build: ./invoice-service
+    container_name: invoice-service
+    environment:
+      RABBITMQ_URL: ${RABBITMQ_URL}
+    depends_on:
+      - rabbitmq
+    networks:
+      - epos-network
+
+  auth-db:
+    image: postgres:16-alpine
+    container_name: auth-db
+    environment:
+      POSTGRES_DB: ${AUTH_DB_NAME}
+      POSTGRES_USER: ${AUTH_DB_USER}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
+    volumes:
+      - auth_db_data:/var/lib/postgresql/data
+    networks:
+      - epos-network
+
+  epos-main-db:
+    image: postgres:16-alpine
+    container_name: epos-main-db
+    environment:
+      POSTGRES_DB: ${EPOS_DB_NAME}
+      POSTGRES_USER: ${EPOS_DB_USER}
+      POSTGRES_PASSWORD: ${EPOS_DB_PASSWORD}
+    volumes:
+      - epos_main_db_data:/var/lib/postgresql/data
+    networks:
+      - epos-network
+
+  customer-db:
+    image: postgres:16-alpine
+    container_name: customer-db
+    environment:
+      POSTGRES_DB: ${CUSTOMER_DB_NAME}
+      POSTGRES_USER: ${CUSTOMER_DB_USER}
+      POSTGRES_PASSWORD: ${CUSTOMER_DB_PASSWORD}
+    volumes:
+      - customer_db_data:/var/lib/postgresql/data
+    networks:
+      - epos-network
+
+  billing-db:
+    image: postgres:16-alpine
+    container_name: billing-db
+    environment:
+      POSTGRES_DB: ${BILLING_DB_NAME}
+      POSTGRES_USER: ${BILLING_DB_USER}
+      POSTGRES_PASSWORD: ${BILLING_DB_PASSWORD}
+    volumes:
+      - billing_db_data:/var/lib/postgresql/data
+    networks:
+      - epos-network
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - epos-network
+
+volumes:
+  auth_db_data:
+  epos_main_db_data:
+  customer_db_data:
+  billing_db_data:
+  rabbitmq_data:
+
+networks:
+  epos-network:
+    driver: bridge
