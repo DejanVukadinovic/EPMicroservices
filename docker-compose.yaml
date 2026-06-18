@@ -13,12 +13,15 @@ services:
   api-gateway:
     build: ./api-gateway
     container_name: api-gateway
+    ports:
+      - 3030:8080
     environment:
       AUTH_SERVICE_URL: http://auth-service:3000
       TENANT_SERVICE_URL: http://tenant-service:3000
       CUSTOMER_SERVICE_URL: http://customer-service:3000
       BILLING_SERVICE_URL: http://billing-service:3000
       INVOICE_SERVICE_URL: http://invoice-service:3000
+      MINIO_URL: http://minio:9000
     depends_on:
       - auth-service
       - tenant-service
@@ -39,6 +42,7 @@ services:
       DB_USER: ${AUTH_DB_USER}
       DB_PASSWORD: ${AUTH_DB_PASSWORD}
       RABBITMQ_URL: ${RABBITMQ_URL}
+      AUTH_TENANT_APPROVED_QUEUE: ${AUTH_TENANT_APPROVED_QUEUE}
     depends_on:
       - auth-db
       - rabbitmq
@@ -56,6 +60,8 @@ services:
       DB_USER: ${EPOS_DB_USER}
       DB_PASSWORD: ${EPOS_DB_PASSWORD}
       RABBITMQ_URL: ${RABBITMQ_URL}
+      AUTH_TENANT_APPROVED_QUEUE: ${AUTH_TENANT_APPROVED_QUEUE}
+      CUSTOMER_TENANT_CREATED_QUEUE: ${CUSTOMER_TENANT_CREATED_QUEUE}
     depends_on:
       - epos-main-db
       - rabbitmq
@@ -73,6 +79,10 @@ services:
       DB_USER: ${CUSTOMER_DB_USER}
       DB_PASSWORD: ${CUSTOMER_DB_PASSWORD}
       RABBITMQ_URL: ${RABBITMQ_URL}
+      CUSTOMER_TENANT_CREATED_QUEUE: ${CUSTOMER_TENANT_CREATED_QUEUE}
+      BILLING_USAGE_QUEUE: ${BILLING_USAGE_QUEUE}
+      INVOICE_GENERATE_QUEUE: ${INVOICE_GENERATE_QUEUE}
+      CUSTOMER_INVOICE_DATA_REQUEST_QUEUE: ${CUSTOMER_INVOICE_DATA_REQUEST_QUEUE}
     depends_on:
       - customer-db
       - rabbitmq
@@ -90,6 +100,9 @@ services:
       DB_USER: ${BILLING_DB_USER}
       DB_PASSWORD: ${BILLING_DB_PASSWORD}
       RABBITMQ_URL: ${RABBITMQ_URL}
+      BILLING_USAGE_QUEUE: ${BILLING_USAGE_QUEUE}
+      INVOICE_GENERATE_QUEUE: ${INVOICE_GENERATE_QUEUE}
+      BILLING_INVOICE_DATA_REQUEST_QUEUE: ${BILLING_INVOICE_DATA_REQUEST_QUEUE}
     depends_on:
       - billing-db
       - rabbitmq
@@ -101,6 +114,9 @@ services:
     container_name: invoice-service
     environment:
       RABBITMQ_URL: ${RABBITMQ_URL}
+      INVOICE_GENERATE_QUEUE: ${INVOICE_GENERATE_QUEUE}
+      CUSTOMER_INVOICE_DATA_REQUEST_QUEUE: ${CUSTOMER_INVOICE_DATA_REQUEST_QUEUE}
+      PUBLIC_STORAGE_URL: ${PUBLIC_STORAGE_URL}
     depends_on:
       - rabbitmq
     networks:
@@ -164,6 +180,18 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
       - epos-network
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - epos-network    
 
 volumes:
   auth_db_data:
@@ -171,6 +199,7 @@ volumes:
   customer_db_data:
   billing_db_data:
   rabbitmq_data:
+  minio_data:
 
 networks:
   epos-network:

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>EPOS Tenant</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+    <link rel="stylesheet" href="/css/styles.css" />
+    <script type="module" src="/js/tenant.js"></script>
+</head>
+
+<body>
+    <main v-scope @vue:mounted="init()" class="app-shell">
+        <nav class="navbar border-bottom app-navbar">
+            <div class="container">
+                <a class="navbar-brand fw-semibold" href="/tenant.html">EPOS</a>
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary btn-sm" @click="toggleTheme">
+                        {{ theme === 'dark' ? 'Light' : 'Dark' }}
+                    </button>
+
+                    <button class="btn btn-outline-secondary btn-sm" @click="logout">
+                        Sign out
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <section class="container app-main">
+            <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-4">
+                <div>
+                    <h1 class="h3 mb-1">Customers</h1>
+                    <p class="text-body-secondary mb-0">
+                        Manage your customer list and create invoices.
+                    </p>
+                </div>
+
+                <button class="btn btn-primary" @click="openCustomerForm">
+                    Add customer
+                </button>
+            </div>
+
+            <div v-if="error" class="alert alert-danger">
+                {{ error }}
+            </div>
+
+            <div class="card app-card">
+                <div class="card-body">
+                    <div v-if="customers.length === 0" class="text-body-secondary">
+                        No customers yet.
+                    </div>
+
+                    <div v-for="customer in customers" :key="customer.id" class="app-list-item">
+                        <div>
+                            <div class="fw-semibold">{{ customer.name }}</div>
+                            <div class="text-body-secondary small">
+                                {{ customer.email || 'No email' }}
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-primary btn-sm" @click="openInvoicePanel(customer)">
+                                Invoices
+                            </button>
+
+                            <button class="btn btn-outline-secondary btn-sm" @click="deleteCustomer(customer.id)">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <aside class="app-sidebar" :class="{ 'is-open': customerFormOpen }">
+            <div class="app-sidebar-header">
+                <div>
+                    <h2 class="h5 mb-1">New customer</h2>
+                    <p class="text-body-secondary mb-0">
+                        Add a customer to your tenant database.
+                    </p>
+                </div>
+
+                <button class="btn btn-outline-secondary btn-sm" @click="closeCustomerForm">
+                    Close
+                </button>
+            </div>
+
+            <div class="app-sidebar-body">
+                <form @submit.prevent="createCustomer">
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input v-model="customerForm.name" class="form-control" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input v-model="customerForm.email" type="email" class="form-control" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Phone</label>
+                        <input v-model="customerForm.phone" class="form-control" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Address</label>
+                        <input v-model="customerForm.address" class="form-control" />
+                    </div>
+
+                    <button class="btn btn-primary w-100" :disabled="loading">
+                        {{ loading ? 'Saving...' : 'Save customer' }}
+                    </button>
+                </form>
+            </div>
+        </aside>
+
+        <aside class="app-sidebar" :class="{ 'is-open': invoicePanelOpen }">
+            <div class="app-sidebar-header">
+                <div>
+                    <h2 class="h5 mb-1">Customer invoice</h2>
+                    <p class="text-body-secondary mb-0">
+                        {{ selectedCustomer?.name }}
+                    </p>
+                </div>
+
+                <button class="btn btn-outline-secondary btn-sm" @click="closeInvoicePanel">
+                    Close
+                </button>
+            </div>
+
+            <div class="app-sidebar-body">
+                <div class="mb-4">
+                    <h3 class="h6 mb-3">Invoice items</h3>
+
+                    <div v-for="(row, index) in transactionRows" :key="index" class="row g-2 mb-2">
+                        <div class="col-12">
+                            <input v-model="row.item" class="form-control" placeholder="Item" />
+                        </div>
+
+                        <div class="col-6">
+                            <div class="form-floating">
+                                <input v-model="row.quantity" type="number" min="1" class="form-control"
+                                    placeholder="Quantity" />
+                                <label>Quantity</label>
+                            </div>
+                        </div>
+
+                        <div class="col-6">
+                            <div class="form-floating">
+                                <input v-model="row.price" type="number" min="0" step="0.01" class="form-control"
+                                    placeholder="Price" />
+                                <label>Price</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 mt-3">
+                        <button class="btn btn-outline-primary w-100" @click="addTransactionRow">
+                            Add row
+                        </button>
+
+                        <button class="btn btn-primary w-100" @click="createCustomerInvoice"
+                            :disabled="generatingInvoice">
+                            <span v-if="generatingInvoice" class="spinner-border spinner-border-sm me-2"></span>
+                            {{ generatingInvoice ? 'Generating...' : 'Generate' }}
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="h6 mb-3">Existing invoices</h3>
+
+                    <div v-if="invoices.length === 0" class="text-body-secondary">
+                        No invoices yet.
+                    </div>
+
+                    <div v-for="invoice in invoices" :key="invoice.id" class="app-list-item">
+                        <div>
+                            <div class="fw-semibold">{{ formatDate(invoice.createdAt) }}</div>
+                            <div class="text-body-secondary small">
+                                {{ invoice.total }} KM · {{ invoice.status }}
+                            </div>
+                        </div>
+
+                        <button class="btn btn-outline-primary btn-sm" @click="downloadInvoice(invoice.id)"
+                            :disabled="invoice.status !== 'READY'">
+                            Download
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <div v-if="customerFormOpen || invoicePanelOpen" class="app-backdrop" @click="closeAllPanels"></div>
+    </main>
+</body>
+
+</html>

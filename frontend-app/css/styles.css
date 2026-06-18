@@ -1,0 +1,114 @@
+:root {
+  --app-green: #198754;
+  --app-green-dark: #146c43;
+  --app-radius: 1rem;
+  --app-surface: #ffffff;
+  --app-bg: #f8faf9;
+}
+
+[data-bs-theme="dark"] {
+  --app-green: #1db954;
+  --app-green-dark: #1ed760;
+  --app-surface: #181818;
+  --app-bg: #121212;
+}
+
+body {
+  background: var(--app-bg);
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.app-navbar {
+  background: var(--app-surface);
+}
+
+.app-main {
+  padding-top: 4rem;
+  padding-bottom: 4rem;
+}
+
+.app-card {
+  border-radius: var(--app-radius);
+  border: 1px solid var(--bs-border-color);
+  background: var(--app-surface);
+  box-shadow: var(--bs-box-shadow-sm);
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--app-green);
+  --bs-btn-border-color: var(--app-green);
+  --bs-btn-hover-bg: var(--app-green-dark);
+  --bs-btn-hover-border-color: var(--app-green-dark);
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--app-green);
+  --bs-btn-border-color: var(--app-green);
+  --bs-btn-hover-bg: var(--app-green);
+  --bs-btn-hover-border-color: var(--app-green);
+}
+
+.form-control {
+  border-radius: var(--app-radius);
+}
+
+.btn {
+  border-radius: var(--app-radius);
+}
+.app-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+
+  padding: 1rem 0;
+  border-top: 1px solid var(--bs-border-color);
+}
+
+.app-list-item:first-of-type {
+  border-top: none;
+}
+
+.app-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 1050;
+
+  width: min(100%, 28rem);
+  height: 100vh;
+
+  background: var(--app-surface);
+  border-left: 1px solid var(--bs-border-color);
+
+  transform: translateX(100%);
+  transition: transform 0.2s ease;
+}
+
+.app-sidebar.is-open {
+  transform: translateX(0);
+}
+
+.app-sidebar-header,
+.app-sidebar-body {
+  padding: 1.5rem;
+}
+
+.app-sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+
+  border-bottom: 1px solid var(--bs-border-color);
+}
+
+.app-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1040;
+
+  background: rgba(0, 0, 0, 0.35);
+}

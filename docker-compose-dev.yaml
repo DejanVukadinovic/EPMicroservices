@@ -1,0 +1,243 @@
+services:
+  frontend-app-dev:
+    build: ./frontend-app
+    container_name: frontend-app-dev
+    ports:
+      - "18080:80"
+    depends_on:
+      - api-gateway-dev
+    networks:
+      - epos-network-dev
+
+  api-gateway-dev:
+    build: ./api-gateway
+    container_name: api-gateway-dev
+    ports:
+      - "13030:8080"
+    environment:
+      AUTH_SERVICE_URL: http://auth-service-dev:3000
+      TENANT_SERVICE_URL: http://tenant-service-dev:3000
+      CUSTOMER_SERVICE_URL: http://customer-service-dev:3000
+      BILLING_SERVICE_URL: http://billing-service-dev:3000
+      INVOICE_SERVICE_URL: http://invoice-service-dev:3000
+      MINIO_URL: http://minio-dev:9000
+    depends_on:
+      - auth-service-dev
+      - tenant-service-dev
+      - customer-service-dev
+      - billing-service-dev
+      - invoice-service-dev
+    networks:
+      - epos-network-dev
+
+  auth-service-dev:
+    build: ./auth-service
+    container_name: auth-service-dev
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      DB_HOST: auth-db-dev
+      DB_PORT: 5432
+      DB_NAME: ${AUTH_DB_NAME}
+      DB_USER: ${AUTH_DB_USER}
+      DB_PASSWORD: ${AUTH_DB_PASSWORD}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq-dev:5672
+      AUTH_TENANT_APPROVED_QUEUE: ${AUTH_TENANT_APPROVED_QUEUE}
+    depends_on:
+      - auth-db-dev
+      - rabbitmq-dev
+    networks:
+      - epos-network-dev
+
+  tenant-service-dev:
+    build: ./tenant-service
+    container_name: tenant-service-dev
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      DB_HOST: epos-main-db-dev
+      DB_PORT: 5432
+      DB_NAME: ${EPOS_DB_NAME}
+      DB_USER: ${EPOS_DB_USER}
+      DB_PASSWORD: ${EPOS_DB_PASSWORD}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq-dev:5672
+      AUTH_TENANT_APPROVED_QUEUE: ${AUTH_TENANT_APPROVED_QUEUE}
+      CUSTOMER_TENANT_CREATED_QUEUE: ${CUSTOMER_TENANT_CREATED_QUEUE}
+    depends_on:
+      - epos-main-db-dev
+      - rabbitmq-dev
+    networks:
+      - epos-network-dev
+
+  customer-service-dev:
+    build: ./customer-service
+    container_name: customer-service-dev
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      CUSTOMER_DB_HOST: customer-db-dev
+      CUSTOMER_DB_PORT: 5432
+      CUSTOMER_DB_USER: ${CUSTOMER_DB_USER}
+      CUSTOMER_DB_PASSWORD: ${CUSTOMER_DB_PASSWORD}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq-dev:5672
+      CUSTOMER_TENANT_CREATED_QUEUE: ${CUSTOMER_TENANT_CREATED_QUEUE}
+      BILLING_USAGE_QUEUE: ${BILLING_USAGE_QUEUE}
+      CUSTOMER_INVOICE_DATA_REQUEST_QUEUE: ${CUSTOMER_INVOICE_DATA_REQUEST_QUEUE}
+    depends_on:
+      - customer-db-dev
+      - rabbitmq-dev
+    networks:
+      - epos-network-dev
+
+  billing-service-dev:
+    build: ./billing-service
+    container_name: billing-service-dev
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      DB_HOST: billing-db-dev
+      DB_PORT: 5432
+      DB_NAME: ${BILLING_DB_NAME}
+      DB_USER: ${BILLING_DB_USER}
+      DB_PASSWORD: ${BILLING_DB_PASSWORD}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq-dev:5672
+      BILLING_USAGE_QUEUE: ${BILLING_USAGE_QUEUE}
+      BILLING_INVOICE_DATA_REQUEST_QUEUE: ${BILLING_INVOICE_DATA_REQUEST_QUEUE}
+    depends_on:
+      - billing-db-dev
+      - rabbitmq-dev
+    networks:
+      - epos-network-dev
+
+  invoice-service-dev:
+    build: ./invoice-service
+    container_name: invoice-service-dev
+    environment:
+      DB_HOST: invoice-db-dev
+      DB_PORT: 5432
+      DB_NAME: ${INVOICE_DB_NAME}
+      DB_USER: ${INVOICE_DB_USER}
+      DB_PASSWORD: ${INVOICE_DB_PASSWORD}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq-dev:5672
+      CUSTOMER_INVOICE_DATA_REQUEST_QUEUE: ${CUSTOMER_INVOICE_DATA_REQUEST_QUEUE}
+      BILLING_INVOICE_DATA_REQUEST_QUEUE: ${BILLING_INVOICE_DATA_REQUEST_QUEUE}
+      S3_ENDPOINT: http://minio-dev:9000
+      S3_BUCKET: ${S3_BUCKET}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_REGION: ${S3_REGION}
+      PUBLIC_STORAGE_URL: ${PUBLIC_STORAGE_URL_DEV}
+    depends_on:
+      - invoice-db-dev
+      - rabbitmq-dev
+      - minio-dev
+    networks:
+      - epos-network-dev
+
+  auth-db-dev:
+    image: postgres:16-alpine
+    container_name: auth-db-dev
+    ports:
+      - "15433:5432"
+    environment:
+      POSTGRES_DB: ${AUTH_DB_NAME}
+      POSTGRES_USER: ${AUTH_DB_USER}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
+    volumes:
+      - auth_db_data_dev:/var/lib/postgresql/data
+    networks:
+      - epos-network-dev
+
+  epos-main-db-dev:
+    image: postgres:16-alpine
+    container_name: epos-main-db-dev
+    ports:
+      - "15434:5432"
+    environment:
+      POSTGRES_DB: ${EPOS_DB_NAME}
+      POSTGRES_USER: ${EPOS_DB_USER}
+      POSTGRES_PASSWORD: ${EPOS_DB_PASSWORD}
+    volumes:
+      - epos_main_db_data_dev:/var/lib/postgresql/data
+    networks:
+      - epos-network-dev
+
+  customer-db-dev:
+    image: postgres:16-alpine
+    container_name: customer-db-dev
+    ports:
+      - "15435:5432"
+    environment:
+      POSTGRES_DB: ${CUSTOMER_DB_NAME}
+      POSTGRES_USER: ${CUSTOMER_DB_USER}
+      POSTGRES_PASSWORD: ${CUSTOMER_DB_PASSWORD}
+    volumes:
+      - customer_db_data_dev:/var/lib/postgresql/data
+    networks:
+      - epos-network-dev
+
+  billing-db-dev:
+    image: postgres:16-alpine
+    container_name: billing-db-dev
+    ports:
+      - "15436:5432"
+    environment:
+      POSTGRES_DB: ${BILLING_DB_NAME}
+      POSTGRES_USER: ${BILLING_DB_USER}
+      POSTGRES_PASSWORD: ${BILLING_DB_PASSWORD}
+    volumes:
+      - billing_db_data_dev:/var/lib/postgresql/data
+    networks:
+      - epos-network-dev
+
+  invoice-db-dev:
+    image: postgres:16-alpine
+    container_name: invoice-db-dev
+    ports:
+      - "15437:5432"
+    environment:
+      POSTGRES_DB: ${INVOICE_DB_NAME}
+      POSTGRES_USER: ${INVOICE_DB_USER}
+      POSTGRES_PASSWORD: ${INVOICE_DB_PASSWORD}
+    volumes:
+      - invoice_db_data_dev:/var/lib/postgresql/data
+    networks:
+      - epos-network-dev
+
+  rabbitmq-dev:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq-dev
+    ports:
+      - "15672:5672"
+      - "25672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq_data_dev:/var/lib/rabbitmq
+    networks:
+      - epos-network-dev
+
+  minio-dev:
+    image: minio/minio
+    container_name: minio-dev
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "19000:9000"
+      - "19001:9001"
+    volumes:
+      - minio_data_dev:/data
+    networks:
+      - epos-network-dev
+
+volumes:
+  auth_db_data_dev:
+  epos_main_db_data_dev:
+  customer_db_data_dev:
+  billing_db_data_dev:
+  invoice_db_data_dev:
+  rabbitmq_data_dev:
+  minio_data_dev:
+
+networks:
+  epos-network-dev:
+    driver: bridge

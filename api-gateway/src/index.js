@@ -8,33 +8,39 @@ app.get("/api/health", async () => {
 });
 
 app.register(proxy, {
-  upstream: "http://auth-service:3000",
+  upstream: "http://auth-service-dev:3000",
   prefix: "/api/auth",
   rewritePrefix: "/api/auth"
 });
 
 app.register(proxy, {
-  upstream: "http://tenant-service:3000",
+  upstream: "http://tenant-service-dev:3000",
   prefix: "/api/tenants",
   rewritePrefix: "/api/tenants"
 });
 
 app.register(proxy, {
-  upstream: "http://customer-service:3000",
+  upstream: "http://customer-service-dev:3000",
   prefix: "/api/customers",
   rewritePrefix: "/api/customers"
 });
 
 app.register(proxy, {
-  upstream: "http://billing-service:3000",
+  upstream: "http://billing-service-dev:3000",
   prefix: "/api/billing",
   rewritePrefix: "/api/billing"
 });
 
 app.register(proxy, {
-  upstream: "http://invoice-service:3000",
+  upstream: process.env.INVOICE_SERVICE_URL,
   prefix: "/api/invoices",
-  rewritePrefix: "/api/invoices"
+  rewritePrefix: "/api/invoices",
+  websocket: true
+});
+
+app.register(proxy, {
+  upstream: process.env.MINIO_URL,
+  prefix: "/storage"
 });
 
 await app.listen({ port: 8080, host: "0.0.0.0" });  
